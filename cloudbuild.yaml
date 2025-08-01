@@ -1,0 +1,79 @@
+steps:
+  # Build the functions
+  - name: "node:20"
+    entrypoint: "npm"
+    args: ["install"]
+
+  - name: "node:20"
+    entrypoint: "npm"
+    args: ["run", "build"]
+
+  - name: "node:20"
+    entrypoint: "npm"
+    args: ["test"]
+
+  # Deploy each function
+  - name: "gcr.io/cloud-builders/gcloud"
+    args:
+      - "functions"
+      - "deploy"
+      - "getUserReferrals"
+      - "--gen2"
+      - "--source=."
+      - "--entry-point=getUserReferrals"
+      - "--runtime=nodejs20"
+      - "--trigger-http"
+      - "--allow-unauthenticated"
+      - "--region=us-west1"
+
+  - name: "gcr.io/cloud-builders/gcloud"
+    args:
+      - "functions"
+      - "deploy"
+      - "getUserReferralInfo"
+      - "--gen2"
+      - "--source=."
+      - "--entry-point=getUserReferralInfo"
+      - "--runtime=nodejs20"
+      - "--trigger-http"
+      - "--allow-unauthenticated"
+      - "--region=us-west1"
+
+  - name: "gcr.io/cloud-builders/gcloud"
+    args:
+      - "functions"
+      - "deploy"
+      - "validateReferralCode"
+      - "--gen2"
+      - "--source=."
+      - "--entry-point=validateReferralCode"
+      - "--runtime=nodejs20"
+      - "--trigger-http"
+      - "--allow-unauthenticated"
+      - "--region=us-west1"
+
+  - name: "gcr.io/cloud-builders/gcloud"
+    args:
+      - "functions"
+      - "deploy"
+      - "createReferral"
+      - "--gen2"
+      - "--source=."
+      - "--entry-point=createReferral"
+      - "--runtime=nodejs20"
+      - "--trigger-http"
+      - "--allow-unauthenticated"
+      - "--region=us-west1"
+
+  - name: "gcr.io/cloud-builders/gcloud"
+    args:
+      - "functions"
+      - "deploy"
+      - "getAllUsers"
+      - "--gen2"
+      - "--source=."
+      - "--entry-point=getAllUsers"
+      - "--runtime=nodejs20"
+      - "--trigger-http"
+      - "--allow-unauthenticated"
+      - "--region=us-west1"

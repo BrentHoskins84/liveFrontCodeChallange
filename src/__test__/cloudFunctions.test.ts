@@ -1,0 +1,353 @@
+import { getUserReferrals } from "../functions/getUserReferrals";
+import { getUserReferralInfo } from "../functions/getUserReferralInfo";
+import { validateReferralCode } from "../functions/validateReferralCode";
+import { createReferral } from "../functions/createReferral";
+import { mockDataService } from "../services/mockDataService";
+import { jest } from "@jest/globals";
+import { query, type Request, type Response } from "express";
+
+describe("Cloud Functions", () => {
+  let testUser: any;
+
+  beforeAll(async () => {
+    await import("../functions/getUserReferrals");
+    testUser = mockDataService.getFirstUser();
+  });
+
+  describe("getUserReferrals", () => {
+    it("should return paginated referrals for valid user", async () => {
+      const req = {
+        method: "GET",
+        params: { userId: testUser.id },
+        query: { limit: "5", offset: "0" },
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await getUserReferrals(req as any, res as any);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          referrals: expect.any(Array),
+          total: expect.any(Number),
+          limit: 5,
+          offset: 0,
+        })
+      );
+    });
+
+    it("should return 400 for missing userId", async () => {
+      const req = { method: "GET", params: {}, query: {} };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await getUserReferrals(req as any, res as any);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "INVALID_USER_ID",
+          message: "Invalid user ID required",
+          code: 400,
+        })
+      );
+    });
+
+    it("should return 404 for non-existent user", async () => {
+      const req = {
+        method: "GET",
+        params: { userId: "non-existent-user" },
+        query: { limit: "10", offset: "0" },
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await getUserReferrals(req as any, res as any);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "USER_NOT_FOUND",
+        })
+      );
+    });
+  });
+
+  describe("getUserReferralInfo", () => {
+    it("should return referral info for valid user", async () => {
+      const req = {
+        method: "GET",
+        params: { userId: testUser.id },
+        query: {},
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await getUserReferralInfo(req as any, res as any);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          referralCode: expect.any(String),
+          totalReferrals: expect.any(Number),
+          completedReferrals: expect.any(Number),
+          pendingReferrals: expect.any(Number),
+          totalRewards: expect.any(Number),
+        })
+      );
+    });
+
+    it("should return 400 for missing userId", async () => {
+      const req = { method: "GET", params: {}, query: {} };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await getUserReferralInfo(req as any, res as any);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "INVALID_USER_ID",
+          message: "Invalid user ID required",
+          code: 400,
+        })
+      );
+    });
+
+    it("should return 404 for non-existent user", async () => {
+      const req = {
+        method: "GET",
+        params: { userId: "non-existent-user" },
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await getUserReferralInfo(req as any, res as any);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+  });
+
+  describe("validateReferralCode", () => {
+    it("should validate existing referral code", async () => {
+      const req = {
+        method: "GET",
+        params: { id: testUser.referralCode },
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await validateReferralCode(req as any, res as any);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isValid: expect.any(Boolean),
+          isExpired: expect.any(Boolean),
+        })
+      );
+    });
+
+    it("should return 400 for missing referral code", async () => {
+      const req = {
+        method: "GET",
+        params: { id: "" },
+        query: {},
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await validateReferralCode(req as any, res as any);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "INVALID_REFERRAL_CODE",
+          message: "Invalid referral code required",
+          code: 400,
+        })
+      );
+    });
+
+    it("should return invalid for non-existent referral code", async () => {
+      const req = {
+        method: "GET",
+        params: { id: "INVALID123" },
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await validateReferralCode(req as any, res as any);
+
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "INVALID_REFERRAL_CODE",
+          message: "Invalid referral code required",
+          code: 400,
+        })
+      );
+    });
+  });
+
+  describe("createReferral", () => {
+    it("should create new referral with valid data", async () => {
+      const req = {
+        method: "POST",
+        body: {
+          referrerUserId: testUser.id,
+          referredUserEmail: "newuser@example.com",
+          sharedMethod: "email",
+          customMessage: "Join me!",
+        },
+        get: jest.fn(),
+        header: jest.fn(),
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await createReferral(req as any, res as any);
+
+      expect(res.status).not.toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          referral: expect.objectContaining({
+            id: expect.any(String),
+            status: "pending",
+            referrerUserId: testUser.id,
+            referredUserEmail: "newuser@example.com",
+            createdAt: expect.any(Date),
+            customMessage: expect.any(String),
+            expiresAt: expect.any(Date),
+            referralCode: expect.any(String),
+            sharedMethod: expect.any(String),
+          }),
+          shareUrl: expect.stringContaining("/install"),
+        })
+      );
+    });
+
+    it("should return 400 for missing required fields", async () => {
+      const req = {
+        method: "POST",
+        body: {
+          referrerUserId: testUser.id,
+          referredUserEmail: "newuser@example.com",
+          shareMethod: "email",
+          customMessage: "Join me!",
+        },
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await createReferral(req as any, res as any);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it("should return 404 for non-existent referrer", async () => {
+      const req = {
+        method: "POST",
+        body: {
+          referrerUserId: "non-existent-user",
+          referredUserEmail: "test@example.com",
+          sharedMethod: "email",
+        },
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await createReferral(req as any, res as any);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "USER_NOT_FOUND",
+        })
+      );
+    });
+
+    it("should return 400 for invalid email format", async () => {
+      const req = {
+        method: "POST",
+        body: {
+          referrerUserId: testUser.id,
+          referredUserEmail: "invalid-email",
+          sharedMethod: "email",
+        },
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await createReferral(req as any, res as any);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "INVALID_EMAIL",
+        })
+      );
+    });
+
+    it("should return 400 for invalid share method", async () => {
+      const req = {
+        method: "POST",
+        body: {
+          referrerUserId: testUser.id,
+          referredUserEmail: "test@example.com",
+          sharedMethod: "invalid-method",
+        },
+      };
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+        set: jest.fn(),
+      };
+
+      await createReferral(req as any, res as any);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "INVALID_SHARE_METHOD",
+        })
+      );
+    });
+  });
+});
