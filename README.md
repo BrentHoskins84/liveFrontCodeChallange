@@ -1,5 +1,9 @@
 # Carton Caps Referral Mock API
 
+## NOTE:
+
+Would have used swagger/openAPI for the API documentation, but due to time constraints, I did not have the time to implement it.
+
 ## Development
 
 To run the project, use `npm start`.
